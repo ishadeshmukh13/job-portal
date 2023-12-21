@@ -9,6 +9,7 @@ const nodemailer = pkg;
 import fs from "fs";
 import fsPromises from "fs/promises";
 import { generateToken } from "../helper/jwtutlis.js";
+import ApplyJob from "../model/applyJob.schema.js";
 
 export default class RecruiterController {
   static async signUp(req, res) {
@@ -149,12 +150,15 @@ export default class RecruiterController {
             info,
           });
         } else {
-          result = { ...result._doc, token: generateToken(result._id, "recruiter") };
+          result = {
+            ...result._doc,
+            token: generateToken(result._id, "recruiter"),
+          };
           res.status(200).json({
             status: true,
             message: "Recruiter logged in successfully",
             data: result,
-            info
+            info,
           });
         }
       } else {
@@ -285,6 +289,95 @@ export default class RecruiterController {
         status: false,
         message: "internal server error",
         error: error.message,
+      });
+    }
+  }
+
+  static async applyUserList(req, res) {
+    try {
+      const result = await Job.aggregate([
+        {
+          $lookup: {
+            from: ApplyJob.collection.name,
+            localField: "_id",
+            foreignField: "job_id",
+            as: "applications",
+          },
+        },
+      ]).exec();
+      const mergedResult = result.map((job) => {
+        const mergedDocument = { ...job, ...job.applications[0] };
+        delete mergedDocument.applications;
+        return mergedDocument;
+      });
+      const data = mergedResult
+        .filter((job) => job.recruiter_id == req.userId && job.candidate_id)
+        .map((job) => {
+          return job;
+        });
+      if (result.length > 0) {
+        if (data.length > 0) {
+          res.status(200).json({
+            status: true,
+            message: "Candidate list who have applied to the job you created. ",
+            data: data,
+          });
+        } else {
+          res.status(200).json({
+            status: true,
+            message: "No one has yet applied for the job created by you.",
+          });
+        }
+      } else {
+        res.status(200).json({
+          status: true,
+          message: "You have not created any jobs.",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: error.message,
+      });
+    }
+  }
+  static async updateStatus(req, res) {
+    try {
+      const recruiter_id = req.userId;
+      const status = req.body.status;
+      const candidate_id = req.body.candidate_id;
+      const job_id = req.body.job_id;
+      const checkJob = await ApplyJob.findOne({
+        candidate_id: candidate_id,
+        recruiter_id: recruiter_id,
+        job_id: job_id,
+      });
+     
+      if (checkJob && Object.keys(checkJob).length > 0) {
+        if(status==="ACCEPTED" || status=="REJECTED "){
+        const updateData = await ApplyJob.findByIdAndUpdate(checkJob._id, {
+          status: status,
+        });
+        res.status(200).json({
+          status: true,
+          message: "status updated.",
+        })}
+        else{
+          res.status(200).json({
+            status: true,
+            message: "please provide right status.",
+          })}
+        
+      } else {
+        res.status(400).json({
+          status: false,
+          message: "please provide right info.",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: error.message,
       });
     }
   }

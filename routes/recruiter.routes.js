@@ -2,7 +2,7 @@ import express from "express";
 import RecruiterController from "../controllers/recruiter.controller.js";
 const router = express.Router();
 import multer from "multer";
-import verifyToken from "../MiddleWare/verifyToken.middleware.js"
+import verifyToken from "../MiddleWare/verifyToken.middleware.js";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -22,22 +22,13 @@ router.post("/sign-up", upload.single("dp"), RecruiterController.signUp);
 
 router.post("/sign-in", RecruiterController.signIn);
 
-router.post(
-  "/create-job",
-  verifyToken,
-  RecruiterController.createJob
-);
+router.post("/create-job", verifyToken, RecruiterController.createJob);
 
-router.get(
-  "/job-list",
-  verifyToken,
-  RecruiterController.jobList
-);
+router.get("/job-list", verifyToken, RecruiterController.jobList);
 
-router.patch(
-  "/update-job/:id",
-  verifyToken,
-  RecruiterController.updateJobStatus
-);
+router.patch("/update-job/:id",verifyToken,RecruiterController.updateJobStatus);
 
+router.get("/user-list-apply",verifyToken, RecruiterController.applyUserList);
+
+router.post("/updateStatus",verifyToken,RecruiterController.updateStatus)
 export default router;

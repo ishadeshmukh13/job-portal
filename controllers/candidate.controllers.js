@@ -11,6 +11,7 @@ const nodemailer = pkg;
 import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
 
 export default class CandidateController {
+
   static async signUp(req, res) {
     try {
       const reqData = req.body;
@@ -219,6 +220,7 @@ export default class CandidateController {
             await ApplyJob.create({
               ...req.body,
               candidate_id: req.userId,
+              recruiter_id:data.recruiter_id
             });
             res.status(200).json({
               status: true,
@@ -297,4 +299,5 @@ export default class CandidateController {
       });
     }
   }
+
 }
