@@ -13,6 +13,7 @@ import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
 import mongoose from "mongoose";
 
 export default class CandidateController {
+
   static async signUp(req, res) {
     try {
       const reqData = req.body;
@@ -386,4 +387,5 @@ export default class CandidateController {
       });
     }
   }
+  
 }
