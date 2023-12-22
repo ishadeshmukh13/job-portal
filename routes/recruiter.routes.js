@@ -34,4 +34,8 @@ router.post("/updateStatus",verifyToken,RecruiterController.updateStatus)
 
 router.get("/listOfCandidate",verifyToken,RecruiterController.listOfCandidate);
 
+router.patch("/edit-job",verifyToken,RecruiterController.editJob);
+
+router.delete("/delete-job",verifyToken,RecruiterController.deleteJob);
+
 export default router;

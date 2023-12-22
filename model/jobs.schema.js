@@ -8,8 +8,9 @@ const JobsSchema = new Schema({
   experience_required: { type: Number, required: true },
   skills: { type: Array, required: true },
   job_title: { type: String, required: true },
-  working_hours: { type: Number, required: true },
+  working_hours: { type: String, required: true },
   created_at: { type: Schema.Types.Date, default: new Date() },
+  updated_at:{type: Schema.Types.Date, default: new Date() },
   location: { type: String, required: true },
   company_name: { type: String, required: true },
   workspace: {

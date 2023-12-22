@@ -13,7 +13,6 @@ import { generateToken } from "../helper/jwtutlis.js";
 import ApplyJob from "../model/applyJob.schema.js";
 
 export default class RecruiterController {
-
   static async signUp(req, res) {
     try {
       const testAccount = await nodemailer.createTestAccount();
@@ -445,5 +444,66 @@ export default class RecruiterController {
       });
     }
   }
-  
+
+  static async editJob(req, res) {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.userId);
+      const job_id = new mongoose.Types.ObjectId(req.query.id);
+
+      const filterJob = await Job.findOneAndUpdate(
+        { _id: job_id, recruiter_id: userId },
+        { $set: { ...req.body, updated_at: new Date() } },
+        { new: true }
+      );
+
+      if (!filterJob) {
+        return res.status(404).json({
+          status: false,
+          message: "Job not found for the given user",
+        });
+      }
+
+      res.status(200).json({
+        status: true,
+        message: "Job updated",
+        data: filterJob,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
+
+  static async deleteJob(req, res) {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.userId);
+      const job_id = new mongoose.Types.ObjectId(req.query.id);
+      const deleteJob = await Job.findOneAndDelete({
+        _id: job_id,
+        recruiter_id: userId,
+      });
+      console.log(deleteJob);
+      if (!deleteJob) {
+        res.status(404).json({
+          status: false,
+          message: "Job not found for the given user.",
+        });
+      } else {
+        res.status(200).json({
+          status: true,
+          message: "Job deleted successfully.",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
 }
