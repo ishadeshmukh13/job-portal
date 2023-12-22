@@ -11,7 +11,7 @@ const nodemailer = pkg;
 import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
 
 export default class CandidateController {
-
+  
   static async signUp(req, res) {
     try {
       const reqData = req.body;
@@ -131,7 +131,7 @@ export default class CandidateController {
             token: generateToken(result._id, "candidate"),
             profile: `data:image/jpeg;base64,${imageBase64}`,
           };
-        
+
           res.status(200).json({
             status: true,
             message: "candidate logged in successfully",
@@ -139,7 +139,10 @@ export default class CandidateController {
             info,
           });
         } else {
-          result = {  ...result._doc, token: generateToken(result._id, "candidate") };
+          result = {
+            ...result._doc,
+            token: generateToken(result._id, "candidate"),
+          };
           res.status(200).json({
             status: true,
             message: "candidate logged in successfully",
@@ -151,37 +154,6 @@ export default class CandidateController {
         res.status(400).json({
           status: false,
           message: "please provide right email or password",
-        });
-      }
-    } catch (error) {
-      res.status(500).json({
-        status: false,
-        message: "internal server error",
-        error: error.message,
-      });
-    }
-  }
-
-  static async listOfCandidate(req, res) {
-    try {
-      const result = await Recruiter.findOne({
-        _id: req.userId,
-      });
-
-      if (result && Object.keys(result).length > 0) {
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 3;
-        let skip = (page - 1) * limit;
-        const allCandidates = await Candidate.find().skip(skip).limit(limit);
-        res.status(200).json({
-          status: true,
-          message: "list of candidate user",
-          data: { list: allCandidates, pageNumber: page, limit: limit },
-        });
-      } else {
-        res.status(400).json({
-          status: false,
-          message: "please provide right token",
         });
       }
     } catch (error) {
@@ -220,7 +192,7 @@ export default class CandidateController {
             await ApplyJob.create({
               ...req.body,
               candidate_id: req.userId,
-              recruiter_id:data.recruiter_id
+              recruiter_id: data.recruiter_id,
             });
             res.status(200).json({
               status: true,
@@ -291,6 +263,53 @@ export default class CandidateController {
           });
         }
       }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "internal server error",
+        error: error.message,
+      });
+    }
+  }
+
+  static async recruiterList(req, res) {
+    try {
+      const pageNo = Number(req.body.page) || 1;
+      const limit = Number(req.body.limit) || 3;
+      const skip = (pageNo - 1) * limit;
+
+      const data = await Recruiter.find({},{password:0}).skip(skip).limit(limit);
+      const finalData= await Promise.all(
+        data.map(async (item, index) => {
+          const currentModulePath = new URL(import.meta.url).pathname;
+          const currentModuleDir = path.dirname(currentModulePath);
+          if (item.profile) {
+            const imagePath = path.join(
+              currentModuleDir,
+              "../uploads/recruiter",
+              item.profile
+            );
+
+            await fsPromises.access(imagePath, fsPromises.constants.F_OK);
+            const imageBuffer = await fsPromises.readFile(imagePath);
+            const imageBase64 = imageBuffer.toString("base64");
+
+            const newItem = {
+              ...item._doc,
+              profile: `data:image/jpeg;base64,${imageBase64}`,
+            };
+            return newItem;
+          } else {
+            return item;
+          }
+        })
+      );
+      const totalPages = Math.ceil(data.length / limit);
+      res.status(200).json({
+        status: true,
+        message: "all recruiter list",
+        data: { data:finalData, pageNo, limit,totalPages },
+      });
     } catch (error) {
       res.status(500).json({
         status: false,

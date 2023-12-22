@@ -22,23 +22,11 @@ router.post("/sign-up", upload.single("dp"), CandidateController.signUp);
 
 router.post("/sign-in", CandidateController.signIn);
 
-router.get(
-  "/listOfCandidate",
-  verfiyToken,
-  CandidateController.listOfCandidate
-);
-router.post(
-  "/apply-job",
-  verfiyToken,
-  CandidateController.applyjob
-);
+router.post("/apply-job",verfiyToken,CandidateController.applyjob);
 
-router.get(
-  "/apply-job-list",
-  verfiyToken,
-  CandidateController.applyJobList
-);
+router.get("/apply-job-list",verfiyToken,CandidateController.applyJobList);
 
+router.get("/recruiter-list",verfiyToken,CandidateController.recruiterList)
 
 
 export default router;

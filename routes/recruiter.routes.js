@@ -31,4 +31,7 @@ router.patch("/update-job/:id",verifyToken,RecruiterController.updateJobStatus);
 router.get("/user-list-apply",verifyToken, RecruiterController.applyUserList);
 
 router.post("/updateStatus",verifyToken,RecruiterController.updateStatus)
+
+router.get("/listOfCandidate",verifyToken,RecruiterController.listOfCandidate);
+
 export default router;

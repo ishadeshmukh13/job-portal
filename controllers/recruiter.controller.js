@@ -1,4 +1,5 @@
 import Recruiter from "../model/recruiter.schema.js";
+import Candidate from "../model/candidate.schema.js";
 import jwt from "jsonwebtoken";
 import Job from "../model/jobs.schema.js";
 import mongoose from "mongoose";
@@ -12,6 +13,7 @@ import { generateToken } from "../helper/jwtutlis.js";
 import ApplyJob from "../model/applyJob.schema.js";
 
 export default class RecruiterController {
+
   static async signUp(req, res) {
     try {
       const testAccount = await nodemailer.createTestAccount();
@@ -298,7 +300,7 @@ export default class RecruiterController {
       const result = await Job.aggregate([
         {
           $lookup: {
-            from: ApplyJob.collection.name,
+            from: "applyjobs",
             localField: "_id",
             foreignField: "job_id",
             as: "applications",
@@ -341,6 +343,7 @@ export default class RecruiterController {
       });
     }
   }
+
   static async updateStatus(req, res) {
     try {
       const recruiter_id = req.userId;
@@ -352,22 +355,22 @@ export default class RecruiterController {
         recruiter_id: recruiter_id,
         job_id: job_id,
       });
-     
+
       if (checkJob && Object.keys(checkJob).length > 0) {
-        if(status==="ACCEPTED" || status=="REJECTED "){
-        const updateData = await ApplyJob.findByIdAndUpdate(checkJob._id, {
-          status: status,
-        });
-        res.status(200).json({
-          status: true,
-          message: "status updated.",
-        })}
-        else{
+        if (status === "ACCEPTED" || status == "REJECTED ") {
+          const updateData = await ApplyJob.findByIdAndUpdate(checkJob._id, {
+            status: status,
+          });
           res.status(200).json({
             status: true,
-            message: "please provide right status.",
-          })}
-        
+            message: "status updated.",
+          });
+        } else {
+          res.status(200).json({
+            status: true,
+            message: "this status already updated in your db.",
+          });
+        }
       } else {
         res.status(400).json({
           status: false,
@@ -381,4 +384,66 @@ export default class RecruiterController {
       });
     }
   }
+
+  static async listOfCandidate(req, res) {
+    try {
+      const result = await Recruiter.findOne({
+        _id: req.userId,
+      });
+
+      if (result && Object.keys(result).length > 0) {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 3;
+        let skip = (page - 1) * limit;
+
+        const allCandidates = await Candidate.find({}, { password: 0 })
+          .skip(skip)
+          .limit(limit);
+        const totalPages = Math.ceil(allCandidates.length / limit);
+        const finalData = await Promise.all(
+          allCandidates.map(async (item, index) => {
+            const currentModulePath = new URL(import.meta.url).pathname;
+            const currentModuleDir = path.dirname(currentModulePath);
+            if (item.profile) {
+              const imagePath = path.join(
+                currentModuleDir,
+                "../uploads/candidate",
+                item.profile
+              );
+
+              await fsPromises.access(imagePath, fsPromises.constants.F_OK);
+              const imageBuffer = await fsPromises.readFile(imagePath);
+              const imageBase64 = imageBuffer.toString("base64");
+
+              const newItem = {
+                ...item._doc,
+                profile: `data:image/jpeg;base64,${imageBase64}`,
+              };
+              return newItem;
+            } else {
+              return item;
+            }
+          })
+        );
+
+        res.status(200).json({
+          status: true,
+          message: "list of candidate user",
+          data: { list: finalData, pageNumber: page, limit, totalPages },
+        });
+      } else {
+        res.status(400).json({
+          status: false,
+          message: "please provide right token",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "internal server error",
+        error: error.message,
+      });
+    }
+  }
+  
 }
