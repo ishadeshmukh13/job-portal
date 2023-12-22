@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post("/sign-up", upload.single("dp"), RecruiterController.signUp);
+router.post("/sign-up", upload.single("profile"), RecruiterController.signUp);
 
 router.post("/sign-in", RecruiterController.signIn);
 
@@ -37,5 +37,7 @@ router.get("/listOfCandidate",verifyToken,RecruiterController.listOfCandidate);
 router.patch("/edit-job",verifyToken,RecruiterController.editJob);
 
 router.delete("/delete-job",verifyToken,RecruiterController.deleteJob);
+
+router.post("/update-profile",upload.single("profile"),verifyToken,RecruiterController.profileUpdate)
 
 export default router;

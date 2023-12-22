@@ -10,6 +10,7 @@ const verfiToken = (req, res, next) => {
     const decoded = jwtVerifyToken(token);
     req.userId = decoded.userId;
     req.userRole = decoded.role;
+    req.email = decoded.email;
     next();
   } catch (error) {
     return res.status(401).json({ message: "Unauthorised: Invaild token" });

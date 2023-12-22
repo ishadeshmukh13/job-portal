@@ -6,12 +6,13 @@ import pkg from "nodemailer";
 import fsPromises from "fs/promises";
 import fs from "fs";
 import { generateToken } from "../helper/jwtutlis.js";
-import path from "path";
+import path  from "path";
+
 const nodemailer = pkg;
 import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
+import mongoose from "mongoose";
 
 export default class CandidateController {
-  
   static async signUp(req, res) {
     try {
       const reqData = req.body;
@@ -128,7 +129,7 @@ export default class CandidateController {
 
           const data = {
             ...result._doc,
-            token: generateToken(result._id, "candidate"),
+            token: generateToken(result._id, "candidate", reqData.email),
             profile: `data:image/jpeg;base64,${imageBase64}`,
           };
 
@@ -141,7 +142,7 @@ export default class CandidateController {
         } else {
           result = {
             ...result._doc,
-            token: generateToken(result._id, "candidate"),
+            token: generateToken(result._id, "candidate", reqData.email),
           };
           res.status(200).json({
             status: true,
@@ -160,6 +161,71 @@ export default class CandidateController {
       res.status(500).json({
         status: false,
         message: "internal server error",
+        error: error.message,
+      });
+    }
+  }
+
+  static async profileUpdate(req, res) {
+    try {
+      const user_id = new mongoose.Types.ObjectId(req.userId);
+      let updateData;
+      const filterProfile = await Candidate.findOne({ _id: user_id });
+      if (req?.file?.path) {
+        if (filterProfile && filterProfile.profile) {
+          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
+          const filePath = path.join(currentModuleDir, "../uploads/candidate/", filterProfile.profile);
+          fs.unlinkSync(filePath);
+        }
+        updateData = await Candidate.findOneAndUpdate(
+          { _id: user_id },
+          {
+            ...req.data,
+            _id: user_id,
+            user_type: "CANDIDATE",
+            email: req.email,
+            profile: `${new Date().toISOString().slice(0, -8)}-${
+              req.file.originalname
+            }`,
+          }
+        );
+      } else {
+        if(req?.body?.profileRemove){
+          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
+          const filePath = path.join(currentModuleDir, "../uploads/candidate/", filterProfile.profile);
+          fs.unlinkSync(filePath);
+        }
+        updateData = await Candidate.findOneAndUpdate(
+          { _id: user_id },
+          {
+            ...req.data,
+            _id: user_id,
+            user_type: "CANDIDATE",
+            email: req.email,
+            $unset: { profile: req?.body?.profileRemove ? 1 : 0 }
+          },
+         { new:true}
+        );
+      }
+      if (!updateData) {
+        if (req?.file?.path) {
+          fs.unlinkSync(req?.file?.path);
+        }
+        res.status(500).json({
+          status: true,
+          message: "user not found please provide right token",
+        });
+      } else {
+      
+        res.status(200).json({
+          status: true,
+          message: "profile updated successfully",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
         error: error.message,
       });
     }
@@ -278,8 +344,10 @@ export default class CandidateController {
       const limit = Number(req.body.limit) || 3;
       const skip = (pageNo - 1) * limit;
 
-      const data = await Recruiter.find({},{password:0}).skip(skip).limit(limit);
-      const finalData= await Promise.all(
+      const data = await Recruiter.find({}, { password: 0 })
+        .skip(skip)
+        .limit(limit);
+      const finalData = await Promise.all(
         data.map(async (item, index) => {
           const currentModulePath = new URL(import.meta.url).pathname;
           const currentModuleDir = path.dirname(currentModulePath);
@@ -308,7 +376,7 @@ export default class CandidateController {
       res.status(200).json({
         status: true,
         message: "all recruiter list",
-        data: { data:finalData, pageNo, limit,totalPages },
+        data: { data: finalData, pageNo, limit, totalPages },
       });
     } catch (error) {
       res.status(500).json({
@@ -318,5 +386,4 @@ export default class CandidateController {
       });
     }
   }
-
 }

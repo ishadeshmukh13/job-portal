@@ -13,6 +13,7 @@ import { generateToken } from "../helper/jwtutlis.js";
 import ApplyJob from "../model/applyJob.schema.js";
 
 export default class RecruiterController {
+
   static async signUp(req, res) {
     try {
       const testAccount = await nodemailer.createTestAccount();
@@ -141,7 +142,7 @@ export default class RecruiterController {
           const imageBase64 = imageBuffer.toString("base64");
           const data = {
             ...result._doc,
-            token: generateToken(result._id, "recruiter"),
+            token: generateToken(result._id, "recruiter",reqData.email),
             profile: `data:image/jpeg;base64,${imageBase64}`,
           };
           res.status(200).json({
@@ -153,7 +154,7 @@ export default class RecruiterController {
         } else {
           result = {
             ...result._doc,
-            token: generateToken(result._id, "recruiter"),
+            token: generateToken(result._id, "recruiter",reqData.email),
           };
           res.status(200).json({
             status: true,
@@ -177,6 +178,70 @@ export default class RecruiterController {
     }
   }
 
+  static async profileUpdate(req, res) {
+    try {
+      const user_id = new mongoose.Types.ObjectId(req.userId);
+      let updateData;
+      const filterProfile = await Recruiter.findOne({ _id: user_id });
+      if (req?.file?.path) {
+        if (filterProfile && filterProfile.profile) {
+          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
+          const filePath = path.join(currentModuleDir, "../uploads/recruiter/", filterProfile.profile);
+          fs.unlinkSync(filePath);
+        }
+        updateData = await Recruiter.findOneAndUpdate(
+          { _id: user_id },
+          {
+            ...req.data,
+            _id: user_id,
+            user_type: "RECRUITER",
+            email: req.email,
+            profile: `${new Date().toISOString().slice(0, -8)}-${
+              req.file.originalname
+            }`,
+          }
+        );
+      } else {
+        if(req?.body?.profileRemove){
+          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
+          const filePath = path.join(currentModuleDir, "../uploads/recruiter/", filterProfile.profile);
+          fs.unlinkSync(filePath);
+        }
+        updateData = await Recruiter.findOneAndUpdate(
+          { _id: user_id },
+          {
+            ...req.data,
+            _id: user_id,
+            user_type: "RECRUITER",
+            email: req.email,
+            $unset: { profile: req?.body?.profileRemove ? 1 : 0 }
+          },
+         { new:true}
+        );
+      }
+      if (!updateData) {
+        if (req?.file?.path) {
+          fs.unlinkSync(req?.file?.path);
+        }
+        res.status(500).json({
+          status: true,
+          message: "user not found please provide right token",
+        });
+      } else {
+      
+        res.status(200).json({
+          status: true,
+          message: "profile updated successfully",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
   static async createJob(req, res) {
     try {
       const userId = req.userId;
@@ -506,4 +571,5 @@ export default class RecruiterController {
       });
     }
   }
+
 }
