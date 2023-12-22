@@ -1,6 +1,5 @@
 import Recruiter from "../model/recruiter.schema.js";
 import Candidate from "../model/candidate.schema.js";
-import jwt from "jsonwebtoken";
 import Job from "../model/jobs.schema.js";
 import mongoose from "mongoose";
 import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
@@ -242,6 +241,7 @@ export default class RecruiterController {
       });
     }
   }
+
   static async createJob(req, res) {
     try {
       const userId = req.userId;
