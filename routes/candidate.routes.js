@@ -30,4 +30,6 @@ router.get("/recruiter-list",verifyToken,CandidateController.recruiterList)
 
 router.post("/update-profile",upload.single("profile"),verifyToken,CandidateController.profileUpdate)
 
+router.get("/getProfile",verifyToken,CandidateController.getProfile)
+
 export default router;

@@ -6,14 +6,13 @@ import pkg from "nodemailer";
 import fsPromises from "fs/promises";
 import fs from "fs";
 import { generateToken } from "../helper/jwtutlis.js";
-import path  from "path";
+import path from "path";
 
 const nodemailer = pkg;
 import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
 import mongoose from "mongoose";
 
 export default class CandidateController {
-
   static async signUp(req, res) {
     try {
       const reqData = req.body;
@@ -174,8 +173,14 @@ export default class CandidateController {
       const filterProfile = await Candidate.findOne({ _id: user_id });
       if (req?.file?.path) {
         if (filterProfile && filterProfile.profile) {
-          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
-          const filePath = path.join(currentModuleDir, "../uploads/candidate/", filterProfile.profile);
+          const currentModuleDir = path.dirname(
+            new URL(import.meta.url).pathname
+          );
+          const filePath = path.join(
+            currentModuleDir,
+            "../uploads/candidate/",
+            filterProfile.profile
+          );
           fs.unlinkSync(filePath);
         }
         updateData = await Candidate.findOneAndUpdate(
@@ -191,9 +196,15 @@ export default class CandidateController {
           }
         );
       } else {
-        if(req?.body?.profileRemove){
-          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
-          const filePath = path.join(currentModuleDir, "../uploads/candidate/", filterProfile.profile);
+        if (req?.body?.profileRemove) {
+          const currentModuleDir = path.dirname(
+            new URL(import.meta.url).pathname
+          );
+          const filePath = path.join(
+            currentModuleDir,
+            "../uploads/candidate/",
+            filterProfile.profile
+          );
           fs.unlinkSync(filePath);
         }
         updateData = await Candidate.findOneAndUpdate(
@@ -203,9 +214,9 @@ export default class CandidateController {
             _id: user_id,
             user_type: "CANDIDATE",
             email: req.email,
-            $unset: { profile: req?.body?.profileRemove ? 1 : 0 }
+            $unset: { profile: req?.body?.profileRemove ? 1 : 0 },
           },
-         { new:true}
+          { new: true }
         );
       }
       if (!updateData) {
@@ -217,7 +228,6 @@ export default class CandidateController {
           message: "user not found please provide right token",
         });
       } else {
-      
         res.status(200).json({
           status: true,
           message: "profile updated successfully",
@@ -387,5 +397,58 @@ export default class CandidateController {
       });
     }
   }
+
+  static async getProfile(req, res) {
+    try {
+      const user_id = req.userId;
+      const email = req.email;
+      let filterData = await Candidate.findOne({
+        _id: user_id,
+        email: email,
+      },{password:0});
+      if (filterData && Object.keys(filterData).length > 0) {
+        let data;
+        if (filterData.profile) {
+          const currentModulePath = new URL(import.meta.url).pathname;
+          const currentModuleDir = path.dirname(currentModulePath);
   
+          const imagePath = path.join(
+            currentModuleDir,
+            "../uploads/candidate",
+            filterData.profile
+          );
+          await fsPromises.access(imagePath, fsPromises.constants.F_OK);
+
+          const imageBuffer = await fsPromises.readFile(imagePath);
+
+          const imageBase64 = imageBuffer.toString("base64");
+
+          data = {
+            ...filterData._doc,
+            profile: `data:image/jpeg;base64,${imageBase64}`,
+          };
+        } else {
+          data = {
+            ...filterData._doc
+          };
+        }
+        res.status(200).json({
+          status: true,
+          message: "profile details",
+          data,
+        });
+      } else {
+        res.status(404).json({
+          status: false,
+          message: "user not found please provide right token",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
 }

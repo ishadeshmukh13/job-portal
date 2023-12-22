@@ -7,9 +7,10 @@ const RecruiterSchema = new Schema({
   mobile_no: { type: String, required: true },
   city: { type: String, required: true },
   company_name: { type: String, required: true },
-  created_at: { type: Schema.Types.Date, default: new Date() },
+  created_at: { type: Schema.Types.Date, default: new Date()},
   user_type: { type: String, default: "RECRUITER" },
-  profile:{ type: String}
+  profile:{ type: String},
+  verified:{type:Boolean,default:false}
 });
 
 const Recruiter = model("Recruiter", RecruiterSchema);
