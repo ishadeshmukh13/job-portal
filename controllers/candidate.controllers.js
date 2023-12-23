@@ -451,4 +451,39 @@ export default class CandidateController {
       });
     }
   }
+
+  static async resetPassword(req, res) {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.userId);
+      const password = req.body.password;
+      const newPassword = req.body.newPassword;
+      const filterUser=await Candidate.findOne({
+        _id:userId
+      })
+      const convertPassword = await comparePasswords(password,filterUser.password);
+     
+      if (convertPassword) {
+        const convertHasPassword = await hashPassword(newPassword);
+        const updatePassword = await Candidate.updateOne(
+          { _id: userId },
+          { password: convertHasPassword }
+        );
+        res.status(200).json({
+          status: true,
+          message: "password successfully updated.",
+        });
+      } else {
+        res.status(404).json({
+          status: false,
+          message: "user not found.",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
 }

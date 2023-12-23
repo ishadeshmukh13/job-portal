@@ -11,7 +11,6 @@ const CandidateSchema = new Schema({
   user_type: { type: String, default: "CANDIDATE" },
   created_at: { type: Schema.Types.Date, default: new Date() },
   profile:{ type: String},
-  verified:{type:Boolean,default:false}
 });
 
 const Candidate = model("candidate", CandidateSchema);

@@ -42,4 +42,6 @@ router.post("/update-profile",upload.single("profile"),verifyToken,RecruiterCont
 
 router.get("/getProfile",verifyToken,RecruiterController.getProfile)
 
+router.put("/resetPassword",verifyToken,RecruiterController.resetPassword)
+
 export default router;

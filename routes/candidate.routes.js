@@ -32,4 +32,7 @@ router.post("/update-profile",upload.single("profile"),verifyToken,CandidateCont
 
 router.get("/getProfile",verifyToken,CandidateController.getProfile)
 
+router.put("/resetPassword",verifyToken,CandidateController.resetPassword)
+
+
 export default router;

@@ -2,7 +2,10 @@ import Recruiter from "../model/recruiter.schema.js";
 import Candidate from "../model/candidate.schema.js";
 import Job from "../model/jobs.schema.js";
 import mongoose from "mongoose";
-import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
+import {
+  hashPassword,
+  comparePasswords,
+} from "../helper/passwordUtils.js";
 import pkg from "nodemailer";
 import path from "path";
 const nodemailer = pkg;
@@ -12,7 +15,6 @@ import { generateToken } from "../helper/jwtutlis.js";
 import ApplyJob from "../model/applyJob.schema.js";
 
 export default class RecruiterController {
-
   static async signUp(req, res) {
     try {
       const testAccount = await nodemailer.createTestAccount();
@@ -128,7 +130,6 @@ export default class RecruiterController {
 
         const currentModulePath = new URL(import.meta.url).pathname;
         const currentModuleDir = path.dirname(currentModulePath);
-
         if (result.profile) {
           const imagePath = path.join(
             currentModuleDir,
@@ -141,7 +142,7 @@ export default class RecruiterController {
           const imageBase64 = imageBuffer.toString("base64");
           const data = {
             ...result._doc,
-            token: generateToken(result._id, "recruiter",reqData.email),
+            token: generateToken(result._id, "recruiter", reqData.email),
             profile: `data:image/jpeg;base64,${imageBase64}`,
           };
           res.status(200).json({
@@ -153,7 +154,7 @@ export default class RecruiterController {
         } else {
           result = {
             ...result._doc,
-            token: generateToken(result._id, "recruiter",reqData.email),
+            token: generateToken(result._id, "recruiter", reqData.email),
           };
           res.status(200).json({
             status: true,
@@ -184,8 +185,14 @@ export default class RecruiterController {
       const filterProfile = await Recruiter.findOne({ _id: user_id });
       if (req?.file?.path) {
         if (filterProfile && filterProfile.profile) {
-          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
-          const filePath = path.join(currentModuleDir, "../uploads/recruiter/", filterProfile.profile);
+          const currentModuleDir = path.dirname(
+            new URL(import.meta.url).pathname
+          );
+          const filePath = path.join(
+            currentModuleDir,
+            "../uploads/recruiter/",
+            filterProfile.profile
+          );
           fs.unlinkSync(filePath);
         }
         updateData = await Recruiter.findOneAndUpdate(
@@ -201,9 +208,15 @@ export default class RecruiterController {
           }
         );
       } else {
-        if(req?.body?.profileRemove){
-          const currentModuleDir = path.dirname(new URL(import.meta.url).pathname);
-          const filePath = path.join(currentModuleDir, "../uploads/recruiter/", filterProfile.profile);
+        if (req?.body?.profileRemove) {
+          const currentModuleDir = path.dirname(
+            new URL(import.meta.url).pathname
+          );
+          const filePath = path.join(
+            currentModuleDir,
+            "../uploads/recruiter/",
+            filterProfile.profile
+          );
           fs.unlinkSync(filePath);
         }
         updateData = await Recruiter.findOneAndUpdate(
@@ -213,9 +226,9 @@ export default class RecruiterController {
             _id: user_id,
             user_type: "RECRUITER",
             email: req.email,
-            $unset: { profile: req?.body?.profileRemove ? 1 : 0 }
+            $unset: { profile: req?.body?.profileRemove ? 1 : 0 },
           },
-         { new:true}
+          { new: true }
         );
       }
       if (!updateData) {
@@ -227,7 +240,6 @@ export default class RecruiterController {
           message: "user not found please provide right token",
         });
       } else {
-      
         res.status(200).json({
           status: true,
           message: "profile updated successfully",
@@ -576,16 +588,19 @@ export default class RecruiterController {
     try {
       const user_id = req.userId;
       const email = req.email;
-      let filterData = await Recruiter.findOne({
-        _id: user_id,
-        email: email,
-      },{password:0});
+      let filterData = await Recruiter.findOne(
+        {
+          _id: user_id,
+          email: email,
+        },
+        { password: 0 }
+      );
       if (filterData && Object.keys(filterData).length > 0) {
         let data;
         if (filterData.profile) {
           const currentModulePath = new URL(import.meta.url).pathname;
           const currentModuleDir = path.dirname(currentModulePath);
-  
+
           const imagePath = path.join(
             currentModuleDir,
             "../uploads/candidate",
@@ -603,7 +618,7 @@ export default class RecruiterController {
           };
         } else {
           data = {
-            ...filterData._doc
+            ...filterData._doc,
           };
         }
         res.status(200).json({
@@ -615,6 +630,41 @@ export default class RecruiterController {
         res.status(404).json({
           status: false,
           message: "user not found please provide right token",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
+
+  static async resetPassword(req, res) {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.userId);
+      const password = req.body.password;
+      const newPassword = req.body.newPassword;
+      const filterUser=await Recruiter.findOne({
+        _id:userId
+      })
+      const convertPassword = await comparePasswords(password,filterUser.password);
+     
+      if (convertPassword) {
+        const convertHasPassword = await hashPassword(newPassword);
+        const updatePassword = await Recruiter.updateOne(
+          { _id: userId },
+          { password: convertHasPassword }
+        );
+        res.status(200).json({
+          status: true,
+          message: "password successfully updated.",
+        });
+      } else {
+        res.status(404).json({
+          status: false,
+          message: "user not found.",
         });
       }
     } catch (error) {
