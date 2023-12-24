@@ -10,6 +10,7 @@ const RecruiterSchema = new Schema({
   created_at: { type: Schema.Types.Date, default: new Date()},
   user_type: { type: String, default: "RECRUITER" },
   profile:{ type: String},
+  verified:{type:Boolean,default:false}
 });
 
 const Recruiter = model("Recruiter", RecruiterSchema);

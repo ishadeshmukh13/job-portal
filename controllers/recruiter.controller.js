@@ -13,7 +13,12 @@ import fs from "fs";
 import fsPromises from "fs/promises";
 import { generateToken } from "../helper/jwtutlis.js";
 import ApplyJob from "../model/applyJob.schema.js";
+import otpGenerator from "generate-otp";
+import OTPModel from "../model/otpVerification.schema.js";
+import { isValid } from "date-fns";
 
+const OTP_EXPIRY_TIME = 5 * 60 * 1000;
+let otp;
 export default class RecruiterController {
   static async signUp(req, res) {
     try {
@@ -30,11 +35,25 @@ export default class RecruiterController {
       });
 
       const reqData = req.body;
+      otp = otpGenerator.generate(6, {
+        digits: true,
+        alphabets: false,
+        upperCase: false,
+        specialChars: false,
+      });
+      await OTPModel.create({
+        email: reqData.email,
+        otp: otp,
+        expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
+      });
       const result = await Recruiter.find({
         email: reqData.email,
       });
 
-      if (result && Object.keys(result).length > 0) {
+      const resultCandidate= await Candidate.find({
+        email: reqData.email,
+      });
+      if ((result && Object.keys(result).length > 0)||(resultCandidate && Object.keys(resultCandidate).length>0)) {
         if (req?.file?.path) {
           fs.unlinkSync(req?.file?.path);
         }
@@ -66,19 +85,66 @@ export default class RecruiterController {
           },
           to: [reqData.email],
           subject: "Hello ✔",
-          text: `Hello, Your account successfully created in on the job portal side`,
+          text: `Hello, Your OTP is ${otp}. Please use this OTP to verify your email on the job portal side.`,
         });
 
         await transporter.sendMail(info);
         res.status(200).json({
           status: true,
-          message: "recruiter created account in successfully",
+          message: "OTP sent successfully in your email",
         });
       }
     } catch (error) {
       res.status(500).json({
         status: false,
         message: "internal server error",
+        error: error.message,
+      });
+    }
+  }
+
+  static async otpVerification(req, res) {
+    try {
+      const otp = req.body.otp;
+      const email = req.body.email;
+
+      const otpDocument = await OTPModel.findOne({ email: email });
+
+      if (!otpDocument) {
+        return res.status(404).json({
+          status: false,
+          message: "OTP not found for the given email.",
+        });
+      }
+
+      // Check if the OTP is correct
+      if (otp !== otpDocument.otp) {
+        return res.status(401).json({
+          status: false,
+          message: "Incorrect OTP. Please try again.",
+        });
+      }
+
+      // Check if the OTP has expired
+      if (!isValid(new Date(), otpDocument.expiresAt)) {
+        return res.status(401).json({
+          status: false,
+          message: "OTP has expired. Please request a new OTP.",
+        });
+      }
+
+     const id = await Recruiter.findOneAndUpdate({ email: email }, {verified: true });
+     console.log(id);
+      await OTPModel.findOneAndDelete({ email: email })
+      res.status(200).json({
+        status: true,
+        message: "OTP verification successful.",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
         error: error.message,
       });
     }
@@ -101,6 +167,7 @@ export default class RecruiterController {
 
       let result = await Recruiter.findOne({
         email: reqData.email,
+        verified:true
       });
 
       if (!result) {
@@ -149,7 +216,6 @@ export default class RecruiterController {
             status: true,
             message: "Recruiter logged in successfully",
             data: data,
-            info,
           });
         } else {
           result = {
@@ -160,7 +226,6 @@ export default class RecruiterController {
             status: true,
             message: "Recruiter logged in successfully",
             data: result,
-            info,
           });
         }
       } else {

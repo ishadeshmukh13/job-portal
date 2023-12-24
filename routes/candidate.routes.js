@@ -34,5 +34,6 @@ router.get("/getProfile",verifyToken,CandidateController.getProfile)
 
 router.put("/resetPassword",verifyToken,CandidateController.resetPassword)
 
+router.put("/otp-verify",CandidateController.otpVerification)
 
 export default router;

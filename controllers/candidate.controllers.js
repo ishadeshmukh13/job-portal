@@ -6,16 +6,31 @@ import pkg from "nodemailer";
 import fsPromises from "fs/promises";
 import fs from "fs";
 import { generateToken } from "../helper/jwtutlis.js";
+import { isValid } from "date-fns";
 import path from "path";
-
 const nodemailer = pkg;
 import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
 import mongoose from "mongoose";
+import OTPModel from "../model/otpVerification.schema.js";
+import otpGenerator from "generate-otp";
 
+const OTP_EXPIRY_TIME = 5 * 60 * 1000;
+let otp;
 export default class CandidateController {
   static async signUp(req, res) {
     try {
       const reqData = req.body;
+      otp = otpGenerator.generate(6, {
+        digits: true,
+        alphabets: false,
+        upperCase: false,
+        specialChars: false,
+      });
+      await OTPModel.create({
+        email: reqData.email,
+        otp: otp,
+        expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
+      });
       const testAccount = await nodemailer.createTestAccount();
       const transporter = await nodemailer.createTransport({
         service: "gmail",
@@ -30,7 +45,10 @@ export default class CandidateController {
       const result = await Candidate.find({
         email: reqData.email,
       });
-      if (result && Object.keys(result).length > 0) {
+      const resultRecruiter = await Recruiter.find({
+        email: reqData.email,
+      });
+      if ((result && Object.keys(result).length > 0 )|| (resultRecruiter && Object.keys(resultRecruiter).length>0)) {
         if (req?.file?.path) {
           fs.unlinkSync(req?.file?.path);
         }
@@ -61,18 +79,64 @@ export default class CandidateController {
           },
           to: [reqData.email],
           subject: "Hello ✔",
-          text: `Hello, Your account successfully created in on the job portal side`,
+          text: `Hello, Your OTP is ${otp}. Please use this OTP to verify your email on the job portal side.`,
         });
         transporter.sendMail(info);
         res.status(201).json({
           status: true,
-          message: "candidate created account in successfully",
+          message: "OTP sent successfully in your email",
         });
       }
     } catch (error) {
       res.status(500).json({
         status: false,
         message: "internal server error",
+        error: error.message,
+      });
+    }
+  }
+  static async otpVerification(req, res) {
+    try {
+      const otp = req.body.otp;
+      const email = req.body.email;
+
+      const otpDocument = await OTPModel.findOne({ email: email });
+
+      if (!otpDocument) {
+        return res.status(404).json({
+          status: false,
+          message: "OTP not found for the given email.",
+        });
+      }
+
+      // Check if the OTP is correct
+      if (otp !== otpDocument.otp) {
+        return res.status(401).json({
+          status: false,
+          message: "Incorrect OTP. Please try again.",
+        });
+      }
+
+      // Check if the OTP has expired
+      if (!isValid(new Date(), otpDocument.expiresAt)) {
+      await OTPModel.findOneAndDelete({ email: email })
+        return res.status(401).json({
+          status: false,
+          message: "OTP has expired. Please request a new OTP.",
+        });
+      }
+
+      await Candidate.findOneAndUpdate({ email: email }, {verified: true });
+      await OTPModel.findOneAndDelete({ email: email })
+      res.status(200).json({
+        status: true,
+        message: "OTP verification successful.",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
         error: error.message,
       });
     }
@@ -95,6 +159,7 @@ export default class CandidateController {
       const reqData = req.body;
       let result = await Candidate.findOne({
         email: reqData.email,
+        verified:true
       });
 
       const checkPassword = await comparePasswords(
@@ -402,16 +467,19 @@ export default class CandidateController {
     try {
       const user_id = req.userId;
       const email = req.email;
-      let filterData = await Candidate.findOne({
-        _id: user_id,
-        email: email,
-      },{password:0});
+      let filterData = await Candidate.findOne(
+        {
+          _id: user_id,
+          email: email,
+        },
+        { password: 0 }
+      );
       if (filterData && Object.keys(filterData).length > 0) {
         let data;
         if (filterData.profile) {
           const currentModulePath = new URL(import.meta.url).pathname;
           const currentModuleDir = path.dirname(currentModulePath);
-  
+
           const imagePath = path.join(
             currentModuleDir,
             "../uploads/candidate",
@@ -429,7 +497,7 @@ export default class CandidateController {
           };
         } else {
           data = {
-            ...filterData._doc
+            ...filterData._doc,
           };
         }
         res.status(200).json({
@@ -457,11 +525,14 @@ export default class CandidateController {
       const userId = new mongoose.Types.ObjectId(req.userId);
       const password = req.body.password;
       const newPassword = req.body.newPassword;
-      const filterUser=await Candidate.findOne({
-        _id:userId
-      })
-      const convertPassword = await comparePasswords(password,filterUser.password);
-     
+      const filterUser = await Candidate.findOne({
+        _id: userId,
+      });
+      const convertPassword = await comparePasswords(
+        password,
+        filterUser.password
+      );
+
       if (convertPassword) {
         const convertHasPassword = await hashPassword(newPassword);
         const updatePassword = await Candidate.updateOne(

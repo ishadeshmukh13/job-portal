@@ -22,6 +22,8 @@ router.post("/sign-up", upload.single("profile"), RecruiterController.signUp);
 
 router.post("/sign-in", RecruiterController.signIn);
 
+router.put("/otp-verify",RecruiterController.otpVerification)
+
 router.post("/create-job", verifyToken, RecruiterController.createJob);
 
 router.get("/job-list", verifyToken, RecruiterController.jobList);
