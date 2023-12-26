@@ -2,10 +2,7 @@ import Recruiter from "../model/recruiter.schema.js";
 import Candidate from "../model/candidate.schema.js";
 import Job from "../model/jobs.schema.js";
 import mongoose from "mongoose";
-import {
-  hashPassword,
-  comparePasswords,
-} from "../helper/passwordUtils.js";
+import { hashPassword, comparePasswords } from "../helper/passwordUtils.js";
 import pkg from "nodemailer";
 import path from "path";
 const nodemailer = pkg;
@@ -32,50 +29,27 @@ export default class RecruiterController {
           pass: "lpqh euqh vthv yivh",
         },
       });
-let otp;
       const reqData = req.body;
-      otp = otpGenerator.generate(6, {
-        digits: true,
-        alphabets: false,
-        upperCase: false,
-        specialChars: false,
-      });
-      const filterOtp=await OTPModel.find({email:req.email});
-      if(filterOtp){
-await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
-      }
-      else{
-        await OTPModel.create({
-          email: reqData.email,
-          otp: otp,
-          expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
-        });
-      }
+
       const result = await Recruiter.find({
         email: reqData.email,
       });
 
-      const resultCandidate= await Candidate.find({
+      const resultCandidate = await Candidate.find({
         email: reqData.email,
       });
-      if ((result && Object.keys(result).length > 0)||(resultCandidate && Object.keys(resultCandidate).length>0)) {
+      if (
+        (result && Object.keys(result).length > 0) ||
+        (resultCandidate && Object.keys(resultCandidate).length > 0)
+      ) {
         if (req?.file?.path) {
           fs.unlinkSync(req?.file?.path);
         }
         if (result.verified) {
-          const info = await transporter.sendMail({
-            from: {
-              name: "job_portal",
-              address: "ishadeshmukh000@gmail.com",
-            },
-            to: [reqData.email],
-            subject: "Hello ✔",
-            text: `Hello, Your OTP is ${otp}. Please use this OTP to verify your email on the job portal side.`,
-          });
-          transporter.sendMail(info);
-          res.status(200).json({
-            status: false,
-            message: "otp sent in your email please check.",
+          return res.status(200).json({
+            status: true,
+            message:
+              "email already exits please verify your email and you can't create account using this email ",
           });
         }
         res.status(409).json({
@@ -97,6 +71,26 @@ await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
           await Recruiter.create({
             ...reqData,
             password: password,
+          });
+        }
+        let otp;
+        otp = otpGenerator.generate(6, {
+          digits: true,
+          alphabets: false,
+          upperCase: false,
+          specialChars: false,
+        });
+        const filterOtp = await OTPModel.find({ email: req.email });
+        if (filterOtp) {
+          await OTPModel.findOneAndUpdate(
+            { email: req.body.email },
+            { otp: otp }
+          );
+        } else {
+          await OTPModel.create({
+            email: reqData.email,
+            otp: otp,
+            expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
           });
         }
         const info = await transporter.sendMail({
@@ -153,8 +147,11 @@ await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
         });
       }
 
-     const id = await Recruiter.findOneAndUpdate({ email: email }, {verified: true });
-      await OTPModel.findOneAndDelete({ email: email })
+      const id = await Recruiter.findOneAndUpdate(
+        { email: email },
+        { verified: true }
+      );
+      await OTPModel.findOneAndDelete({ email: email });
       res.status(200).json({
         status: true,
         message: "OTP verification successful.",
@@ -185,7 +182,7 @@ await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
 
       let result = await Recruiter.findOne({
         email: reqData.email,
-        verified:true
+        verified: true,
       });
 
       if (!result) {
@@ -727,11 +724,14 @@ await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
       const userId = new mongoose.Types.ObjectId(req.userId);
       const password = req.body.password;
       const newPassword = req.body.newPassword;
-      const filterUser=await Recruiter.findOne({
-        _id:userId
-      })
-      const convertPassword = await comparePasswords(password,filterUser.password);
-     
+      const filterUser = await Recruiter.findOne({
+        _id: userId,
+      });
+      const convertPassword = await comparePasswords(
+        password,
+        filterUser.password
+      );
+
       if (convertPassword) {
         const convertHasPassword = await hashPassword(newPassword);
         const updatePassword = await Recruiter.updateOne(

@@ -19,27 +19,6 @@ export default class CandidateController {
   static async signUp(req, res) {
     try {
       const reqData = req.body;
-      let otp;
-      otp = otpGenerator.generate(6, {
-        digits: true,
-        alphabets: false,
-        upperCase: false,
-        specialChars: false,
-      });
-      const filterOtp = await OTPModel.find({ email: req.email });
-
-      if (filterOtp.length>0) {
-        await OTPModel.findOneAndUpdate(
-          { email: req.body.email },
-          { otp: otp }
-        );
-      } else {
-        await OTPModel.create({
-          email: reqData.email,
-          otp: otp,
-          expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
-        });
-      }
       const testAccount = await nodemailer.createTestAccount();
       const transporter = await nodemailer.createTransport({
         service: "gmail",
@@ -58,33 +37,24 @@ export default class CandidateController {
         email: reqData.email,
       });
       if (
-        (result && (result).length > 0) ||
-        (resultRecruiter && (resultRecruiter).length > 0)
+        (result && result.length > 0) ||
+        (resultRecruiter && resultRecruiter.length > 0)
       ) {
-        if (req?.file?.path) {
-          fs.unlinkSync(req?.file?.path);
-        }
-
         if (!result[0].verified) {
-          const info = await transporter.sendMail({
-            from: {
-              name: "job_portal",
-              address: "ishadeshmukh000@gmail.com",
-            },
-            to: [reqData.email],
-            subject: "Hello ✔",
-            text: `Hello, Your OTP is ${otp}. Please use this OTP to verify your email on the job portal side.`,
-          });
-          transporter.sendMail(info);
           return res.status(200).json({
+            status: true,
+            message:
+              "email already exits please verify your email and you can't create account using this email ",
+          });
+        } else {
+          if (req?.file?.path) {
+            fs.unlinkSync(req?.file?.path);
+          }
+          return res.status(409).json({
             status: false,
-            message: "otp sent in your email please check.",
+            message: "email already exits",
           });
         }
-        return res.status(409).json({
-          status: false,
-          message: "email already exits",
-        });
       } else {
         const password = await hashPassword(req.body.password);
         if (req?.file?.path) {
@@ -99,6 +69,26 @@ export default class CandidateController {
           await Candidate.create({
             ...reqData,
             password: password,
+          });
+        }
+        let otp;
+        otp = otpGenerator.generate(6, {
+          digits: true,
+          alphabets: false,
+          upperCase: false,
+          specialChars: false,
+        });
+        const filterOtp = await OTPModel.find({ email: req.email });
+        if (filterOtp) {
+          await OTPModel.findOneAndUpdate(
+            { email: req.body.email },
+            { otp: otp }
+          );
+        } else {
+          await OTPModel.create({
+            email: reqData.email,
+            otp: otp,
+            expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
           });
         }
         const info = await transporter.sendMail({
@@ -229,7 +219,6 @@ export default class CandidateController {
             status: true,
             message: "candidate logged in successfully",
             data: data,
-            info,
           });
         } else {
           result = {
@@ -240,7 +229,6 @@ export default class CandidateController {
             status: true,
             message: "candidate logged in successfully",
             data: result,
-            info,
           });
         }
       } else {
