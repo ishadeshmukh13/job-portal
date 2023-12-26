@@ -18,7 +18,6 @@ import OTPModel from "../model/otpVerification.schema.js";
 import { isValid } from "date-fns";
 
 const OTP_EXPIRY_TIME = 5 * 60 * 1000;
-let otp;
 export default class RecruiterController {
   static async signUp(req, res) {
     try {
@@ -33,7 +32,7 @@ export default class RecruiterController {
           pass: "lpqh euqh vthv yivh",
         },
       });
-
+let otp;
       const reqData = req.body;
       otp = otpGenerator.generate(6, {
         digits: true,
@@ -41,11 +40,17 @@ export default class RecruiterController {
         upperCase: false,
         specialChars: false,
       });
-      await OTPModel.create({
-        email: reqData.email,
-        otp: otp,
-        expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
-      });
+      const filterOtp=await OTPModel.find({email:req.email});
+      if(filterOtp){
+await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
+      }
+      else{
+        await OTPModel.create({
+          email: reqData.email,
+          otp: otp,
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
+        });
+      }
       const result = await Recruiter.find({
         email: reqData.email,
       });
@@ -56,6 +61,22 @@ export default class RecruiterController {
       if ((result && Object.keys(result).length > 0)||(resultCandidate && Object.keys(resultCandidate).length>0)) {
         if (req?.file?.path) {
           fs.unlinkSync(req?.file?.path);
+        }
+        if (result.verified) {
+          const info = await transporter.sendMail({
+            from: {
+              name: "job_portal",
+              address: "ishadeshmukh000@gmail.com",
+            },
+            to: [reqData.email],
+            subject: "Hello ✔",
+            text: `Hello, Your OTP is ${otp}. Please use this OTP to verify your email on the job portal side.`,
+          });
+          transporter.sendMail(info);
+          res.status(200).json({
+            status: false,
+            message: "otp sent in your email please check.",
+          });
         }
         res.status(409).json({
           status: false,
@@ -107,7 +128,6 @@ export default class RecruiterController {
     try {
       const otp = req.body.otp;
       const email = req.body.email;
-
       const otpDocument = await OTPModel.findOne({ email: email });
 
       if (!otpDocument) {
@@ -134,14 +154,12 @@ export default class RecruiterController {
       }
 
      const id = await Recruiter.findOneAndUpdate({ email: email }, {verified: true });
-     console.log(id);
       await OTPModel.findOneAndDelete({ email: email })
       res.status(200).json({
         status: true,
         message: "OTP verification successful.",
       });
     } catch (error) {
-      console.error(error);
       res.status(500).json({
         status: false,
         message: "Internal server error",
@@ -611,7 +629,6 @@ export default class RecruiterController {
         data: filterJob,
       });
     } catch (error) {
-      console.error(error);
       res.status(500).json({
         status: false,
         message: "Internal server error",
@@ -628,7 +645,6 @@ export default class RecruiterController {
         _id: job_id,
         recruiter_id: userId,
       });
-      console.log(deleteJob);
       if (!deleteJob) {
         res.status(404).json({
           status: false,

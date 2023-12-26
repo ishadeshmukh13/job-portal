@@ -15,22 +15,31 @@ import OTPModel from "../model/otpVerification.schema.js";
 import otpGenerator from "generate-otp";
 
 const OTP_EXPIRY_TIME = 5 * 60 * 1000;
-let otp;
 export default class CandidateController {
   static async signUp(req, res) {
     try {
       const reqData = req.body;
+      let otp;
       otp = otpGenerator.generate(6, {
         digits: true,
         alphabets: false,
         upperCase: false,
         specialChars: false,
       });
-      await OTPModel.create({
-        email: reqData.email,
-        otp: otp,
-        expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
-      });
+      const filterOtp = await OTPModel.find({ email: req.email });
+
+      if (filterOtp.length>0) {
+        await OTPModel.findOneAndUpdate(
+          { email: req.body.email },
+          { otp: otp }
+        );
+      } else {
+        await OTPModel.create({
+          email: reqData.email,
+          otp: otp,
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
+        });
+      }
       const testAccount = await nodemailer.createTestAccount();
       const transporter = await nodemailer.createTransport({
         service: "gmail",
@@ -48,11 +57,31 @@ export default class CandidateController {
       const resultRecruiter = await Recruiter.find({
         email: reqData.email,
       });
-      if ((result && Object.keys(result).length > 0 )|| (resultRecruiter && Object.keys(resultRecruiter).length>0)) {
+      if (
+        (result && (result).length > 0) ||
+        (resultRecruiter && (resultRecruiter).length > 0)
+      ) {
         if (req?.file?.path) {
           fs.unlinkSync(req?.file?.path);
         }
-        res.status(409).json({
+
+        if (!result[0].verified) {
+          const info = await transporter.sendMail({
+            from: {
+              name: "job_portal",
+              address: "ishadeshmukh000@gmail.com",
+            },
+            to: [reqData.email],
+            subject: "Hello ✔",
+            text: `Hello, Your OTP is ${otp}. Please use this OTP to verify your email on the job portal side.`,
+          });
+          transporter.sendMail(info);
+          return res.status(200).json({
+            status: false,
+            message: "otp sent in your email please check.",
+          });
+        }
+        return res.status(409).json({
           status: false,
           message: "email already exits",
         });
@@ -101,7 +130,6 @@ export default class CandidateController {
       const email = req.body.email;
 
       const otpDocument = await OTPModel.findOne({ email: email });
-
       if (!otpDocument) {
         return res.status(404).json({
           status: false,
@@ -119,21 +147,20 @@ export default class CandidateController {
 
       // Check if the OTP has expired
       if (!isValid(new Date(), otpDocument.expiresAt)) {
-      await OTPModel.findOneAndDelete({ email: email })
+        await OTPModel.findOneAndDelete({ email: email });
         return res.status(401).json({
           status: false,
           message: "OTP has expired. Please request a new OTP.",
         });
       }
 
-      await Candidate.findOneAndUpdate({ email: email }, {verified: true });
-      await OTPModel.findOneAndDelete({ email: email })
+      await Candidate.findOneAndUpdate({ email: email }, { verified: true });
+      await OTPModel.findOneAndDelete({ email: email });
       res.status(200).json({
         status: true,
         message: "OTP verification successful.",
       });
     } catch (error) {
-      console.error(error);
       res.status(500).json({
         status: false,
         message: "Internal server error",
@@ -159,7 +186,7 @@ export default class CandidateController {
       const reqData = req.body;
       let result = await Candidate.findOne({
         email: reqData.email,
-        verified:true
+        verified: true,
       });
 
       const checkPassword = await comparePasswords(
