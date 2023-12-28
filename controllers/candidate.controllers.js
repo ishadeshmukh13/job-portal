@@ -79,7 +79,8 @@ export default class CandidateController {
           specialChars: false,
         });
         const filterOtp = await OTPModel.find({ email: req.email });
-        if (filterOtp) {
+
+        if (filterOtp && filterOtp.length>0) {
           await OTPModel.findOneAndUpdate(
             { email: req.body.email },
             { otp: otp }
@@ -89,7 +90,9 @@ export default class CandidateController {
             email: reqData.email,
             otp: otp,
             expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
+            userType: "CANDIDATE",
           });
+
         }
         const info = await transporter.sendMail({
           from: {
@@ -114,12 +117,16 @@ export default class CandidateController {
       });
     }
   }
+
   static async otpVerification(req, res) {
     try {
       const otp = req.body.otp;
       const email = req.body.email;
 
-      const otpDocument = await OTPModel.findOne({ email: email });
+      const otpDocument = await OTPModel.findOne({
+        email: email,
+        userType: "CANDIDATE",
+      });
       if (!otpDocument) {
         return res.status(404).json({
           status: false,
@@ -150,6 +157,62 @@ export default class CandidateController {
         status: true,
         message: "OTP verification successful.",
       });
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
+
+  static async resendOtp(req, res) {
+    try {
+      let otp;
+      otp = otpGenerator.generate(6, {
+        digits: true,
+        alphabets: false,
+        upperCase: false,
+        specialChars: false,
+      });
+      const otpDocument = await OTPModel.findOne({
+        email: req.body.email,
+        userType: "CANDIDATE",
+      });
+      if (otpDocument && Object.keys(otpDocument).length > 0) {
+        await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
+        const testAccount = await nodemailer.createTestAccount();
+        const transporter = await nodemailer.createTransport({
+          service: "gmail",
+          host: "smtp.gmail.com",
+          port: 587,
+          secure: false,
+          auth: {
+            user: "ishadeshmukh000@gmail.com",
+            pass: "lpqh euqh vthv yivh",
+          },
+        });
+
+        const info = await transporter.sendMail({
+          from: {
+            name: "job_portal",
+            address: "ishadeshmukh000@gmail.com",
+          },
+          to: [req.body.email],
+          subject: "Hello ✔",
+          text: `Hello, Your OTP is ${otp}. Please use this OTP to verify your email on the job portal side.`,
+        });
+        transporter.sendMail(info);
+        res.status(201).json({
+          status: true,
+          message: "OTP resent successfully in your email",
+        });
+      } else {
+        res.status(400).json({
+          status: false,
+          message: "please provide right email",
+        });
+      }
     } catch (error) {
       res.status(500).json({
         status: false,

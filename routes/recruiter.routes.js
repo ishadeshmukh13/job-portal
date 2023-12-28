@@ -46,4 +46,7 @@ router.get("/getProfile",verifyToken,RecruiterController.getProfile)
 
 router.put("/resetPassword",verifyToken,RecruiterController.resetPassword)
 
+router.put("/resend-otp",RecruiterController.resendOtp)
+
+
 export default router;

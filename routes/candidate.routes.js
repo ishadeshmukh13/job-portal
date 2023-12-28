@@ -36,4 +36,6 @@ router.put("/resetPassword",verifyToken,CandidateController.resetPassword)
 
 router.put("/otp-verify",CandidateController.otpVerification)
 
+router.put("/resend-otp",CandidateController.resendOtp)
+
 export default router;
