@@ -80,7 +80,7 @@ export default class CandidateController {
         });
         const filterOtp = await OTPModel.find({ email: req.email });
 
-        if (filterOtp && filterOtp.length>0) {
+        if (filterOtp && filterOtp.length > 0) {
           await OTPModel.findOneAndUpdate(
             { email: req.body.email },
             { otp: otp }
@@ -92,7 +92,6 @@ export default class CandidateController {
             expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME),
             userType: "CANDIDATE",
           });
-
         }
         const info = await transporter.sendMail({
           from: {
@@ -180,7 +179,10 @@ export default class CandidateController {
         userType: "CANDIDATE",
       });
       if (otpDocument && Object.keys(otpDocument).length > 0) {
-        await OTPModel.findOneAndUpdate({email:req.body.email},{otp:otp})
+        await OTPModel.findOneAndUpdate(
+          { email: req.body.email },
+          { otp: otp }
+        );
         const testAccount = await nodemailer.createTestAccount();
         const transporter = await nodemailer.createTransport({
           service: "gmail",
@@ -494,11 +496,11 @@ export default class CandidateController {
 
   static async recruiterList(req, res) {
     try {
-      const pageNo = Number(req.body.page) || 1;
-      const limit = Number(req.body.limit) || 3;
+      const pageNo = Number(req.query.page) || 1;
+      const limit = Number(req.query.limit) || 3;
       const skip = (pageNo - 1) * limit;
-
-      const data = await Recruiter.find({}, { password: 0 })
+      const data2 = await Recruiter.find({});
+      const data = await Recruiter.find({verified:true}, { password: 0 })
         .skip(skip)
         .limit(limit);
       const finalData = await Promise.all(
@@ -526,7 +528,8 @@ export default class CandidateController {
           }
         })
       );
-      const totalPages = Math.ceil(data.length / limit);
+      const totalPages = Math.ceil(data2.length / limit);
+      console.log(totalPages, data2.length);
       res.status(200).json({
         status: true,
         message: "all recruiter list",

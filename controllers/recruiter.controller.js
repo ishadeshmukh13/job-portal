@@ -552,11 +552,12 @@ export default class RecruiterController {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 3;
         let skip = (page - 1) * limit;
+        const data2 = await Recruiter.find({});
 
-        const allCandidates = await Candidate.find({}, { password: 0 })
+        const allCandidates = await Candidate.find({verified:true}, { password: 0 })
           .skip(skip)
           .limit(limit);
-        const totalPages = Math.ceil(allCandidates.length / limit);
+        const totalPages = Math.ceil(data2.length / limit);
         const finalData = await Promise.all(
           allCandidates.map(async (item, index) => {
             const currentModulePath = new URL(import.meta.url).pathname;
