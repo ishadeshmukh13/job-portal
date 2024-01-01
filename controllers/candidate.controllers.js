@@ -408,7 +408,7 @@ export default class CandidateController {
         if (checkForm && Object.keys(checkForm).length > 0) {
           res.status(200).json({
             status: true,
-            message: "you already applied this job  !!!",
+            message: "You have already applied this job  !!!",
           });
         } else if (data && Object.keys(data).length > 0) {
           if (data.total_application > countOfAppliedJobs) {
