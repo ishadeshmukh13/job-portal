@@ -26,7 +26,6 @@ router.put("/otp-verify",RecruiterController.otpVerification)
 
 router.post("/create-job", verifyToken, RecruiterController.createJob);
 
-router.get("/job-list", verifyToken, RecruiterController.jobList);
 
 router.patch("/update-job/:id",verifyToken,RecruiterController.updateJobStatus);
 

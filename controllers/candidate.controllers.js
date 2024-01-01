@@ -109,6 +109,7 @@ export default class CandidateController {
         });
       }
     } catch (error) {
+      fs.unlinkSync(req?.file?.path);
       res.status(500).json({
         status: false,
         message: "internal server error",
@@ -500,7 +501,7 @@ export default class CandidateController {
       const limit = Number(req.query.limit) || 3;
       const skip = (pageNo - 1) * limit;
       const data2 = await Recruiter.find({});
-      const data = await Recruiter.find({verified:true}, { password: 0 })
+      const data = await Recruiter.find({ verified: true }, { password: 0 })
         .skip(skip)
         .limit(limit);
       const finalData = await Promise.all(
@@ -634,6 +635,32 @@ export default class CandidateController {
       res.status(500).json({
         status: false,
         message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
+
+  static async jobList(req, res) {
+    try {
+      const createJobData = await Job.find({});
+      console.log("createjobdataaaa", createJobData);
+
+      if (createJobData && Object.keys(createJobData).length > 0) {
+        res.status(200).json({
+          status: true,
+          message: "list of your created jobs.",
+          data: createJobData,
+        });
+      } else {
+        res.status(500).json({
+          status: false,
+          message: "You have not created any jobs.",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "internal server error",
         error: error.message,
       });
     }

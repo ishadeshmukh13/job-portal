@@ -46,6 +46,7 @@ export default class RecruiterController {
           fs.unlinkSync(req?.file?.path);
         }
         if (result.verified) {
+          
           return res.status(200).json({
             status: true,
             message:
@@ -111,6 +112,7 @@ export default class RecruiterController {
         });
       }
     } catch (error) {
+      fs.unlinkSync(req?.file?.path);
       res.status(500).json({
         status: false,
         message: "internal server error",
