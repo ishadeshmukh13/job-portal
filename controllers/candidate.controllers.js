@@ -109,7 +109,6 @@ export default class CandidateController {
         });
       }
     } catch (error) {
-      fs.unlinkSync(req?.file?.path);
       res.status(500).json({
         status: false,
         message: "internal server error",
