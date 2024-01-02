@@ -480,8 +480,8 @@ export default class CandidateController {
             data: mergedData,
           });
         } else {
-          res.status(500).json({
-            status: false,
+          res.status(200).json({
+            status: true,
             message: "You have not applied for any job.",
           });
         }
