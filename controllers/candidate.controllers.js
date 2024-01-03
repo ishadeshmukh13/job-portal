@@ -334,10 +334,10 @@ export default class CandidateController {
             ...req.data,
             _id: user_id,
             user_type: "CANDIDATE",
-            email: req.email,
             profile: `${new Date().toISOString().slice(0, -8)}-${
               req.file.originalname
             }`,
+            email: req.email,
           }
         );
       } else {
