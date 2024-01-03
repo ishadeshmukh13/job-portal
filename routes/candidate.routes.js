@@ -29,6 +29,7 @@ router.get("/apply-job-list",verifyToken,CandidateController.applyJobList);
 router.get("/recruiter-list",verifyToken,CandidateController.recruiterList)
 
 router.post("/update-profile",upload.single("profile"),verifyToken,CandidateController.profileUpdate)
+router.post("/update-profile-data",verifyToken,CandidateController.profileUpdateData)
 
 router.get("/getProfile",verifyToken,CandidateController.getProfile)
 
@@ -38,6 +39,7 @@ router.put("/otp-verify",CandidateController.otpVerification)
 
 router.put("/resend-otp",CandidateController.resendOtp)
 router.get("/job-list", verifyToken, CandidateController.jobList);
+
 
 
 export default router;

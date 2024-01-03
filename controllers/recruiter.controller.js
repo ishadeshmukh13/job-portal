@@ -337,6 +337,42 @@ export default class RecruiterController {
     }
   }
 
+  static async profileUpdateData(req,res){
+    try {
+      const user_id = new mongoose.Types.ObjectId(req.userId);
+      const findUser = await Recruiter.findById(user_id);
+
+      if (findUser) {
+        const updatedUser = await Recruiter.findByIdAndUpdate(user_id, {
+          name:  req.body.name||findUser.name,
+          email: findUser.email,
+          password: findUser.password,
+          mobile_no: req.body.mobile_no || findUser.mobile_no,
+          company_name:req.body.company_name || findUser.company_name ,
+          city: req.body.city  || findUser.city,
+          user_type: findUser.user_type,
+          created_at: findUser.created_at,
+          profile: findUser.profile,
+          verified: findUser.verified,
+        });
+        res.status(200).json({
+          status: true,
+          message: "Profile data updated successfully.",
+        });
+      } else {
+        res.status(400).json({
+          status: false,
+          message: "User not found. Please provide the correct token.",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
   static async createJob(req, res) {
     try {
       const userId = req.userId;

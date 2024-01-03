@@ -42,6 +42,8 @@ router.delete("/delete-job",verifyToken,RecruiterController.deleteJob);
 router.post("/update-profile",upload.single("profile"),verifyToken,RecruiterController.profileUpdate)
 
 router.get("/getProfile",verifyToken,RecruiterController.getProfile)
+router.post("/update-profile-data",verifyToken,RecruiterController.profileUpdateData)
+
 
 router.put("/resetPassword",verifyToken,RecruiterController.resetPassword)
 
